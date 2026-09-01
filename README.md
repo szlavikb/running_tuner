@@ -38,12 +38,16 @@ running-tuner match --spotify https://open.spotify.com/track/<id>
 running-tuner match --youtube https://youtube.com/watch?v=<id>
 
 # options
+--artist "Beast in Black"   # override the resolved reference artist (e.g. --file with no/incomplete ID3 tags)
+--title "Blind and Frozen"  # override the resolved reference title (same use case)
 --tolerance 4     # BPM window around the reference (default 4)
 --limit 10        # number of results (default 10)
 --deep            # enable yt-dlp+librosa fallback for candidates missing BPM data (slow, ~5-15s/candidate)
 --deep-max 5      # cap how many candidates get the deep fallback
 --output json     # machine-readable output instead of a table
 ```
+
+`--file` reads artist/title from the audio file's ID3 tags; if the file has none, both come back empty and Last.fm's similarity search — which requires an artist — silently returns 0 candidates. Use `--artist`/`--title` to supply them manually in that case.
 
 ## Testing
 
@@ -61,7 +65,7 @@ pytest -m slow             # also run the real librosa audio-decoding test
 
 ## Known limitations
 
-- GetSongBPM's catalog has gaps, especially for obscure or non-Western tracks — those candidates are silently dropped unless `--deep` is used.
+- GetSongBPM's catalog still has real gaps (verified: e.g. "Beast in Black" is indexed as an artist but not every one of their tracks is) — those candidates are silently dropped unless `--deep` is used.
 - `librosa`'s key estimation is a heuristic (Krumhansl-Schmuckler correlation), not ground truth — treated as a secondary tie-breaker only, never the primary ranking signal.
 - `yt-dlp` requires periodic updates (`pip install -U yt-dlp`) as YouTube changes internals; failures there surface as a clean error rather than a crash.
 - Free-tier rate limits on GetSongBPM/Last.fm are handled with in-process caching and throttling, but very large `--limit`/`--deep-max` values will still take a while.
