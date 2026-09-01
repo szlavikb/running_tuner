@@ -38,7 +38,7 @@ class GetSongBPMClient:
             resp = self._session.get(
                 SEARCH_URL,
                 params={
-                    "type": "song",
+                    "type": "both",
                     "lookup": f"song:{title} artist:{artist}",
                     "api_key": self._api_key,
                 },

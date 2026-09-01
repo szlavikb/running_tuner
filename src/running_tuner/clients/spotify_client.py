@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from typing import Optional
 
+import click
 import requests
 
 from running_tuner.errors import ResolutionError, RateLimitError
@@ -27,13 +28,16 @@ class SpotifyClient:
 
     def _get_token(self, force_refresh: bool = False) -> str:
         if self._token and not force_refresh and time.time() < self._token_expiry:
+            click.echo("🎼  SpotifyClient._get_token(): cache hit, reusing token", err=True)
             return self._token
+        click.echo(f"🎼  SpotifyClient._get_token(): POST {TOKEN_URL} (force_refresh={force_refresh})", err=True)
         resp = self._session.post(
             TOKEN_URL,
             data={"grant_type": "client_credentials"},
             auth=(self._client_id, self._client_secret),
             timeout=10,
         )
+        click.echo(f"🎼  SpotifyClient._get_token(): response status={resp.status_code}", err=True)
         if resp.status_code != 200:
             raise ResolutionError(f"Spotify auth failed ({resp.status_code}): {resp.text[:200]}")
         payload = resp.json()
@@ -44,7 +48,9 @@ class SpotifyClient:
     def _request(self, method: str, url: str, **kwargs) -> requests.Response:
         for attempt in range(2):
             token = self._get_token(force_refresh=attempt > 0)
+            click.echo(f"🎼  SpotifyClient._request(): {method} {url} (attempt {attempt + 1})", err=True)
             resp = self._session.request(method, url, headers={"Authorization": f"Bearer {token}"}, timeout=10, **kwargs)
+            click.echo(f"🎼  SpotifyClient._request(): -> status={resp.status_code}", err=True)
             if resp.status_code == 401 and attempt == 0:
                 continue
             if resp.status_code == 429:
@@ -57,6 +63,7 @@ class SpotifyClient:
         return resp
 
     def get_track(self, track_id: str) -> dict:
+        click.echo(f"🎵  SpotifyClient.get_track(track_id={track_id!r})", err=True)
         resp = self._request("GET", f"{API_BASE}/tracks/{track_id}")
         if resp.status_code != 200:
             raise ResolutionError(f"Spotify track lookup failed ({resp.status_code}) for id={track_id}")
@@ -68,17 +75,20 @@ class SpotifyClient:
         }
 
     def search_track(self, artist: str, title: str) -> Optional[str]:
+        click.echo(f"🎵  SpotifyClient.search_track(artist={artist!r}, title={title!r})", err=True)
         try:
             resp = self._request(
                 "GET",
                 f"{API_BASE}/search",
                 params={"q": f"track:{title} artist:{artist}", "type": "track", "limit": 1},
             )
-        except (RateLimitError, ResolutionError):
+        except (RateLimitError, ResolutionError) as exc:
+            click.echo(f"🎵  SpotifyClient.search_track(): swallowed {exc.__class__.__name__}: {exc}", err=True)
             return None
         if resp.status_code != 200:
             return None
         items = (resp.json().get("tracks") or {}).get("items") or []
         if not items:
+            click.echo("🎵  SpotifyClient.search_track(): no matches", err=True)
             return None
         return f"spotify:track:{items[0]['id']}"
