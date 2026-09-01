@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "running-tuner"
+version = "0.1.0"
+description = "Find songs with similar tempo/key to a reference track, for pace-matched running playlists."
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1,<9",
+    "requests>=2.32,<3",
+    "python-dotenv>=1.0,<2",
+    "librosa>=0.10.2,<0.11",
+    "yt-dlp>=2024.8.1",
+    "numpy>=1.26,<2.1",
+    "mutagen>=1.47,<2",
+    "rich>=13.7,<14",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-mock>=3.14",
+    "responses>=0.25",
+    "ruff>=0.6",
+    "soundfile>=0.12",
+]
+
+[project.scripts]
+running-tuner = "running_tuner.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/running_tuner"]
+
+[tool.pytest.ini_options]
+markers = ["slow: exercises real librosa audio decoding, slower to run"]
